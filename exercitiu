@@ -1,0 +1,176 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX 100
+
+typedef struct {
+    int u, v, cost;
+} Edge;
+
+Edge edges[MAX];
+Edge mstKruskal[MAX];
+Edge mstPrim[MAX];
+
+int parent[MAX];
+int n = 0, m = 0;
+
+// ---------------- DISJOINT SET (KRUSKAL) ----------------
+int find(int i) {
+    if (parent[i] == i)
+        return i;
+    return parent[i] = find(parent[i]);
+}
+
+void unionSet(int a, int b) {
+    int rootA = find(a);
+    int rootB = find(b);
+    parent[rootA] = rootB;
+}
+
+// ---------------- SORTARE MUCHII ----------------
+int compare(const void* a, const void* b) {
+    return ((Edge*)a)->cost - ((Edge*)b)->cost;
+}
+
+// ---------------- CITIRE CSV ----------------
+void readCSV(const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (!file) {
+        printf("Eroare la deschiderea fisierului!\n");
+        exit(1);
+    }
+
+    while (fscanf_s(file, "%d,%d,%d", &edges[m].u, &edges[m].v, &edges[m].cost) == 3) {
+        if (edges[m].u >= n) n = edges[m].u + 1;
+        if (edges[m].v >= n) n = edges[m].v + 1;
+        m++;
+    }
+
+    fclose(file);
+}
+
+// ---------------- KRUSKAL ----------------
+void kruskal() {
+    for (int i = 0; i < n; i++)
+        parent[i] = i;
+
+    qsort(edges, m, sizeof(Edge), compare);
+
+    int count = 0, costTotal = 0;
+
+    for (int i = 0; i < m && count < n - 1; i++) {
+        int u = edges[i].u;
+        int v = edges[i].v;
+
+        if (find(u) != find(v)) {
+            mstKruskal[count++] = edges[i];
+            costTotal += edges[i].cost;
+            unionSet(u, v);
+        }
+    }
+
+    printf("\n--- Kruskal MST ---\n");
+    for (int i = 0; i < count; i++)
+        printf("%d - %d : %d\n", mstKruskal[i].u, mstKruskal[i].v, mstKruskal[i].cost);
+
+    printf("Cost total: %d\n", costTotal);
+
+    FILE* out = fopen("kruskal.csv", "w");
+    fprintf(out, "u,v,cost\n");
+    for (int i = 0; i < count; i++)
+        fprintf(out, "%d,%d,%d\n", mstKruskal[i].u, mstKruskal[i].v, mstKruskal[i].cost);
+    fprintf(out, "Total,,%d\n", costTotal);
+    fclose(out);
+}
+
+// ---------------- PRIM ----------------
+void prim() {
+    int selected[MAX] = { 0 };
+    int costTotal = 0;
+    int count = 0;
+
+    selected[0] = 1;
+
+    printf("\n--- Prim MST ---\n");
+
+    while (count < n - 1) {
+        int min = 9999;
+        int x = 0, y = 0;
+
+        for (int i = 0; i < m; i++) {
+            if (selected[edges[i].u] && !selected[edges[i].v] && edges[i].cost < min) {
+                min = edges[i].cost;
+                x = edges[i].u;
+                y = edges[i].v;
+            }
+            if (selected[edges[i].v] && !selected[edges[i].u] && edges[i].cost < min) {
+                min = edges[i].cost;
+                x = edges[i].v;
+                y = edges[i].u;
+            }
+        }
+
+        mstPrim[count].u = x;
+        mstPrim[count].v = y;
+        mstPrim[count].cost = min;
+
+        printf("%d - %d : %d\n", x, y, min);
+
+        costTotal += min;
+        selected[y] = 1;
+        count++;
+    }
+
+    printf("Cost total: %d\n", costTotal);
+
+    FILE* out = fopen("prim.csv", "w");
+    fprintf(out, "u,v,cost\n");
+    for (int i = 0; i < count; i++)
+        fprintf(out, "%d,%d,%d\n", mstPrim[i].u, mstPrim[i].v, mstPrim[i].cost);
+    fprintf(out, "Total,,%d\n", costTotal);
+    fclose(out);
+}
+
+// ---------------- ANALIZA ----------------
+void analiza() {
+    FILE* f = fopen("analiza.txt", "w");
+
+    fprintf(f, "=== Analiza comparativa Kruskal vs Prim ===\n\n");
+
+    fprintf(f, "Asemanari:\n");
+    fprintf(f, "- Ambele gasesc arbore minim de acoperire (MST)\n");
+    fprintf(f, "- Complexitate aproximativ O(E log E)\n");
+    fprintf(f, "- Functioneaza pe grafuri neorientate ponderate\n\n");
+
+    fprintf(f, "Diferente:\n");
+    fprintf(f, "- Kruskal sorteaza muchiile global\n");
+    fprintf(f, "- Prim construieste arborele incremental\n\n");
+
+    fprintf(f, "Avantaje Kruskal:\n");
+    fprintf(f, "- Simplu de implementat\n");
+    fprintf(f, "- Bun pentru grafuri rare\n\n");
+
+    fprintf(f, "Dezavantaje Kruskal:\n");
+    fprintf(f, "- Necesita structura Union-Find\n\n");
+
+    fprintf(f, "Avantaje Prim:\n");
+    fprintf(f, "- Eficient pe grafuri dense\n");
+    fprintf(f, "- Poate folosi heap pentru optimizare\n\n");
+
+    fprintf(f, "Dezavantaje Prim:\n");
+    fprintf(f, "- Mai complex de implementat eficient\n");
+
+    fclose(f);
+}
+
+// ---------------- MAIN ----------------
+int main() {
+    readCSV("input.csv");
+
+    kruskal();
+    prim();
+    analiza();
+
+    return 0;
+}
